@@ -1,6 +1,6 @@
 # Vigiles
 
-<img src="assets/vigiles-256.png" width="120" align="right" alt="Vigiles icon">
+<img src="src/vigiles-256.png" width="120" align="right" alt="Vigiles icon">
 
 > *Ubi fumus, ibi ignis* - where there is smoke, there is fire.
 
