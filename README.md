@@ -5,9 +5,12 @@
 A Win32 C++ application that shows the folder tree of every local disk and
 overlays live file-system activity captured from the kernel through ETW.
 
+Written with heavily use of Claude AI.
+
 The *vigiles urbani* were the night watch of ancient Rome, and they doubled as
-its fire brigade: men who walked the city looking for things that were starting
-to burn. This one walks a filesystem. Folders glow while they are busy, and the
+its fire brigade.
+
+This one walks a filesystem: Folders glow while they are busy, and the
 motto is the workflow - you spot the smoke here, then go and find the fire.
 
 Left pane: lazily populated folder tree. Each visible folder shows rolled-up
@@ -35,9 +38,8 @@ Watching a folder light up tells you *that* something is happening, not *what*
 or *why*. The button collapses whatever is currently on screen into a compact
 brief and puts it on the clipboard, ready to paste into any assistant.
 
-It deliberately does not emit the captured events one by one. A few thousand
-near-identical lines tell a model nothing that counts do not, and they exhaust a
-context window for no benefit. Everything is aggregated into four rankings -
+It deliberately does not emit the captured events one by one.
+Everything is aggregated into four rankings -
 processes, subfolders, files and extensions - each line carrying a count, the
 set of operation types seen on it, and total bytes. A sample of 805 operations
 comes out at roughly 2.4 KB. See [sample-prompt.txt](sample-prompt.txt).
@@ -46,13 +48,8 @@ Two details that matter more than they look:
 
 PIDs are resolved to image names through `OpenProcess` +
 `QueryFullProcessImageNameW`, cached per PID. A process that has already exited
-keeps its number as the label, so press the button while the activity is
+keeps it's number as the label, so press the button while the activity is
 happening.
-
-Aggregation keys are case-folded. Windows reports the same file under different
-spellings - the kernel emits both `\WINDOWS\SYSTEM32\` and `\Windows\System32\`,
-sometimes within the same second - and without folding, one real file splits
-into several rows and the counts that the whole brief rests on are wrong.
 
 The prompt ends with four questions: what causes the activity, whether it is
 normal, how to stop or reconfigure it, and a request to search the web for
@@ -63,12 +60,12 @@ current information about the processes and paths involved.
 Process Monitor uses its own file-system minifilter. You *can* do that, but it
 means writing a kernel driver, getting an EV cert plus Microsoft attestation
 signing for it to load on a normal machine, and shipping a service to install
-it. Every bug is a bugcheck.
+it.
 
 The `Microsoft-Windows-Kernel-File` ETW provider gives you the same events
 (create, read, write, delete, rename, set-info, cleanup, close, directory
-enumeration) from user mode, with no driver at all. The only requirement is an
-elevated process. Unless you need to *block* or *modify* I/O, this is the right
+enumeration) from user mode, with no driver at all. **The only requirement is an
+elevated process**. Unless you need to *block* or *modify* I/O, this is the right
 layer.
 
 ## Build
@@ -107,12 +104,12 @@ current name table, so handles that were already open before we started can
 still be resolved. The session is stopped-if-stale on startup, because an ETW
 session outlives the process that created it.
 
-**Buffering.** This is the part your question was really about. There are two
+**Buffering.** There are two
 separate buffers and they fail differently:
 
 1. *Kernel buffers*, configured in `EtwConfig`: 512 buffers of 64 KB = 32 MB.
-   If the consumer thread falls behind for longer than that, the kernel drops
-   events and reports the count through the buffer callback — shown as
+   If the consumer thread falls behind for longer than that, **the kernel drops
+   events** and reports the count through the buffer callback — shown as
    "Kernel lost" in the status bar. Raise `maxBuffers` if you ever see it move.
    `FlushTimer = 1` keeps latency at about a second when the system is idle.
 
