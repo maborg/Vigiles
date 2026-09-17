@@ -4,6 +4,21 @@
 // the city looking for fires. This one watches a filesystem instead: folders
 // glow while they are busy, and the motto is the job description - you see the
 // smoke here, then go and find the fire.
+//
+// Copyright (C) 2026 Marco Borgna
+//
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or (at your
+// option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+// for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <windows.h>
 #include <commctrl.h>
@@ -18,6 +33,7 @@
 #include <cmath>
 #include "etw_monitor.h"
 #include "log.h"
+#include "resource.h"
 
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "shlwapi.lib")
@@ -980,6 +996,26 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int nCmdShow) {
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInst;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+
+    // Large icon for Alt-Tab and the window's system menu, small one for the
+    // title bar and taskbar. Asking for the exact pixel sizes makes Windows
+    // pick the matching image out of the .ico instead of rescaling the 256px
+    // one, which is what makes the title bar icon look muddy in most apps.
+    wc.hIcon = (HICON)LoadImageW(hInst, MAKEINTRESOURCEW(IDI_APPICON), IMAGE_ICON,
+                                 GetSystemMetrics(SM_CXICON),
+                                 GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR);
+    wc.hIconSm = (HICON)LoadImageW(hInst, MAKEINTRESOURCEW(IDI_APPICON), IMAGE_ICON,
+                                   GetSystemMetrics(SM_CXSMICON),
+                                   GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
+    if (wc.hIcon) {
+        LOGI(L"application icon loaded (%dx%d large, %dx%d small)",
+             GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON),
+             GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON));
+    } else {
+        LOGW(L"no icon resource in this executable (LoadImage: %lu) - the .rc "
+             L"was not compiled in. Re-run cmake configure and check for the "
+             L"'Vigiles icon:' line.", GetLastError());
+    }
     wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
     wc.lpszClassName = L"VigilesMainWnd";
     if (!RegisterClassExW(&wc)) {

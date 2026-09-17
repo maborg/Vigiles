@@ -5,6 +5,7 @@ out/
 [Rr]elease/
 x64/
 *.exe
+*.res
 *.pdb
 *.ilk
 *.obj

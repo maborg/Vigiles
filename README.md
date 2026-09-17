@@ -1,5 +1,7 @@
 # Vigiles
 
+<img src="assets/vigiles-256.png" width="120" align="right" alt="Vigiles icon">
+
 > *Ubi fumus, ibi ignis* - where there is smoke, there is fire.
 
 A Win32 C++ application that shows the folder tree of every local disk and
@@ -8,9 +10,8 @@ overlays live file-system activity captured from the kernel through ETW.
 Written with heavily use of Claude AI but built and tested by a human.
 
 The *vigiles urbani* were the night watch of ancient Rome, and they doubled as
-its fire brigade.
-
-This one walks a filesystem: Folders glow while they are busy, and the
+its fire brigade: men who walked the city looking for things that were starting
+to burn. This one walks a filesystem. Folders glow while they are busy, and the
 motto is the workflow - you spot the smoke here, then go and find the fire.
 
 Left pane: lazily populated folder tree. Each visible folder shows rolled-up
@@ -192,4 +193,21 @@ immediately - close anything using the volume first.
 - The tree does not watch for folders created or deleted after you expanded a
   node. `ReadDirectoryChangesW` on expanded nodes, or simply re-populating on
   collapse/expand, would cover it.
+- Untested against a compiler on my side — I wrote this without a Windows
+  toolchain available, so expect to fix a few signature or header nits on the
+  first build.
 
+## License
+
+Copyright (C) 2026 Marco Borgna.
+
+Vigiles is free software under the **GNU Lesser General Public License,
+version 3 or later**. The full terms are in [COPYING.LESSER](COPYING.LESSER),
+which applies on top of the GPL-3.0 text in [COPYING](COPYING) - LGPL-3.0 is
+written as a set of additional permissions over the GPL, so both files are
+needed for the licence to be complete.
+
+In short: you may use, study, modify and redistribute this, including inside a
+larger work that is not itself free software. What you may not do is ship a
+modified version of *these files* without making those modifications available
+under the same terms.
