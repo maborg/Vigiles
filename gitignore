@@ -1,0 +1,30 @@
+# Build output
+build/
+out/
+[Dd]ebug/
+[Rr]elease/
+x64/
+*.exe
+*.pdb
+*.ilk
+*.obj
+*.idb
+
+# Visual Studio / CMake
+.vs/
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+*.vcxproj*
+*.sln
+
+# Runtime artifacts written next to the executable
+Vigiles.log
+Vigiles.dmp
+*.etl
+
+# Editors / OS
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini

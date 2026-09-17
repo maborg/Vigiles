@@ -1,0 +1,43 @@
+Analyse the disk activity of a Windows machine, captured live with ETW (Microsoft-Windows-Kernel-File provider).
+
+## Context
+- Folder watched: C:\  (subfolders included)
+- Time window: 11:12:02.318 - 11:12:19.744
+- Operations in sample: 805  (reads 62, writes 123)
+- Total I/O in sample: 4.0 MB
+- Cumulative counters for this folder since the monitor started: read 18422, write 3160, create 24901, delete 12, other 41207  (412.6 MB)
+
+The data below is AGGREGATED: each line is a count of identical or similar events, not a single event. 'xN' is how many times, and the square brackets list the operation types seen on that entry.
+
+## Processes responsible
+- svchost.exe  x620  [Create]
+- Vigiles.exe  x96  [Write]  768.0 KB
+- MsMpEng.exe  x44  [Read]  2.8 MB
+- chrome.exe  x27  [Write]  432.0 KB
+- explorer.exe  x18  [Read]  72.0 KB
+
+## Busiest subfolders
+- WINDOWS  x734  [Create/Read/Write]  840.0 KB
+- ProgramData  x44  [Read]  2.8 MB
+- Users  x27  [Write]  432.0 KB
+
+## Most touched files
+- C:\WINDOWS\ServiceProfiles\LocalService\AppData\Local\Intel\ipfsrv\ipfsrv.dptf  x312  [Create]
+- C:\WINDOWS\ServiceProfiles\LocalService\AppData\Local\Intel\ipfsrv\ipfsrv.icst  x308  [Create]
+- C:\Windows\System32\LogFiles\WMI\RtBackup\EtwRTVigiles.etl  x96  [Write]  768.0 KB
+- C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.26080.3-0\mpengine.dll  x44  [Read]  2.8 MB
+- C:\Users\alex\AppData\Local\Google\Chrome\User Data\Default\Cache\data_2  x27  [Write]  432.0 KB
+- C:\WINDOWS\SYSTEM32\kernel.appcore.dll  x18  [Read]  72.0 KB
+
+## Extensions
+- .dptf  x312
+- .icst  x308
+- .etl  x96  768.0 KB
+- .dll  x62  2.8 MB
+- (no extension)  x27  432.0 KB
+
+## What I need
+1. **Cause**: what is generating this activity? Identify the process, service or scheduled task responsible and explain what the work it is doing is for.
+2. **Normal or not**: is this expected behaviour, or does it point at a problem (a loop, runaway indexing, a log growing unchecked, a stuck update, unwanted software)? Justify the answer from the counts above.
+3. **How to intervene**: how can this activity be stopped, reduced or reconfigured? Give concrete commands, settings, registry keys, group policies or exclusions, and for each option the risks and what is lost by applying it.
+4. **Web search**: look online for current information about the processes and paths listed above (they are real Windows files and services) and cite your sources.
