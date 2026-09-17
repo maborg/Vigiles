@@ -5,7 +5,7 @@
 A Win32 C++ application that shows the folder tree of every local disk and
 overlays live file-system activity captured from the kernel through ETW.
 
-Written with heavily use of Claude AI.
+Written with heavily use of Claude AI but built and tested by a human.
 
 The *vigiles urbani* were the night watch of ancient Rome, and they doubled as
 its fire brigade.
@@ -18,7 +18,7 @@ read/write counts and total bytes for its whole subtree, and gets a warm
 background tint while it has been touched in the last three seconds.
 
 Right pane: virtual list view of individual operations (time, op, PID, size,
-path), colour-coded by operation. Selecting a folder in the tree clears the list
+path, process name), colour-coded by operation. Selecting a folder in the tree clears the list
 and filters new rows to that subtree, so it is always a live view of one folder
 rather than a log of the whole machine. Double-clicking a row walks the tree to
 the folder that row lives in, expanding it on the way, and starts watching
@@ -38,7 +38,6 @@ Watching a folder light up tells you *that* something is happening, not *what*
 or *why*. The button collapses whatever is currently on screen into a compact
 brief and puts it on the clipboard, ready to paste into any assistant.
 
-It deliberately does not emit the captured events one by one.
 Everything is aggregated into four rankings -
 processes, subfolders, files and extensions - each line carrying a count, the
 set of operation types seen on it, and total bytes. A sample of 805 operations
@@ -48,8 +47,13 @@ Two details that matter more than they look:
 
 PIDs are resolved to image names through `OpenProcess` +
 `QueryFullProcessImageNameW`, cached per PID. A process that has already exited
-keeps it's number as the label, so press the button while the activity is
+keeps its number as the label, so press the button while the activity is
 happening.
+
+Aggregation keys are case-folded. Windows reports the same file under different
+spellings - the kernel emits both `\WINDOWS\SYSTEM32\` and `\Windows\System32\`,
+sometimes within the same second - and without folding, one real file splits
+into several rows and the counts that the whole brief rests on are wrong.
 
 The prompt ends with four questions: what causes the activity, whether it is
 normal, how to stop or reconfigure it, and a request to search the web for
@@ -60,12 +64,12 @@ current information about the processes and paths involved.
 Process Monitor uses its own file-system minifilter. You *can* do that, but it
 means writing a kernel driver, getting an EV cert plus Microsoft attestation
 signing for it to load on a normal machine, and shipping a service to install
-it.
+it. Every bug is a bugcheck.
 
 The `Microsoft-Windows-Kernel-File` ETW provider gives you the same events
 (create, read, write, delete, rename, set-info, cleanup, close, directory
-enumeration) from user mode, with no driver at all. **The only requirement is an
-elevated process**. Unless you need to *block* or *modify* I/O, this is the right
+enumeration) from user mode, with no driver at all. The only requirement is an
+elevated process. Unless you need to *block* or *modify* I/O, this is the right
 layer.
 
 ## Build
@@ -104,12 +108,12 @@ current name table, so handles that were already open before we started can
 still be resolved. The session is stopped-if-stale on startup, because an ETW
 session outlives the process that created it.
 
-**Buffering.** There are two
+**Buffering.** This is the part your question was really about. There are two
 separate buffers and they fail differently:
 
 1. *Kernel buffers*, configured in `EtwConfig`: 512 buffers of 64 KB = 32 MB.
-   If the consumer thread falls behind for longer than that, **the kernel drops
-   events** and reports the count through the buffer callback — shown as
+   If the consumer thread falls behind for longer than that, the kernel drops
+   events and reports the count through the buffer callback — shown as
    "Kernel lost" in the status bar. Raise `maxBuffers` if you ever see it move.
    `FlushTimer = 1` keeps latency at about a second when the system is idle.
 
@@ -174,12 +178,18 @@ immediately - close anything using the volume first.
 - Physical disk queue depth and per-disk throughput are *not* in Kernel-File.
   For that, add the `Microsoft-Windows-Kernel-Disk` provider in the same
   session and correlate on IRP pointer.
-- Process names are not resolved; the list shows raw PIDs. Enable the
-  `Microsoft-Windows-Kernel-Process` provider, or just call `OpenProcess` +
-  `QueryFullProcessImageName` lazily with a PID cache.
+- Process names are resolved with `OpenProcess` +
+  `QueryFullProcessImageNameW`, cached per PID, at the moment the event is
+  captured rather than when it is displayed - a process that has already exited
+  cannot be named, and resolving lazily at paint time would lose every
+  short-lived one. Two gaps remain. A process that exits between the kernel
+  event and the next UI tick still shows as a bare number, which
+  `Microsoft-Windows-Kernel-Process` would fix by naming processes as they
+  start. And Windows recycles PIDs, so under heavy process churn the cache can
+  label a row with the previous tenant of that number; the fix there is the
+  `PROCESS_START_KEY` in the event's extended data, which is unique and never
+  reused. The session already enables it, it is simply not read yet.
 - The tree does not watch for folders created or deleted after you expanded a
   node. `ReadDirectoryChangesW` on expanded nodes, or simply re-populating on
   collapse/expand, would cover it.
-- Untested against a compiler on my side — I wrote this without a Windows
-  toolchain available, so expect to fix a few signature or header nits on the
-  first build.
+

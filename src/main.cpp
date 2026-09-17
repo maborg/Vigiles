@@ -408,8 +408,42 @@ static void SetFilter(const std::wstring& displayPath) {
         ? std::wstring(L"Path  (all folders)")
         : L"Path  (" + displayPath + L")";
     LVCOLUMNW c{}; c.mask = LVCF_TEXT; c.pszText = (LPWSTR)header.c_str();
-    ListView_SetColumn(g_list, 4, &c);
+    ListView_SetColumn(g_list, 5, &c);   // Path is now column 5
 
+}
+
+// ------------------------------------------------------------- process names
+
+static std::unordered_map<uint32_t, std::wstring> g_procNames;
+
+// PID -> image name, cached for the life of the session. Resolution fails for a
+// process that has already exited, and for a protected one; the number is kept
+// as the label in that case, and the failure is cached too so we do not pay the
+// syscall again on every event from that PID.
+//
+// Caveat: Windows recycles PIDs. During heavy process churn - a build, say - a
+// number can be handed to a new process while this cache still holds the old
+// name for it, and that row will be labelled wrongly. The clean fix is the
+// PROCESS_START_KEY in the event's extended data, which is unique and never
+// reused; the session already enables it (EVENT_ENABLE_PROPERTY_PROCESS_START_KEY
+// in EtwMonitor::Start), it just is not read yet.
+static const std::wstring& ProcessName(uint32_t pid) {
+    auto it = g_procNames.find(pid);
+    if (it != g_procNames.end()) return it->second;
+
+    std::wstring name = L"pid " + std::to_wstring(pid);
+    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (h) {
+        wchar_t buf[MAX_PATH] = {};
+        DWORD n = MAX_PATH;
+        if (QueryFullProcessImageNameW(h, 0, buf, &n) && n) {
+            std::wstring full(buf, n);
+            size_t p = full.find_last_of(L'\\');
+            name = (p == std::wstring::npos) ? full : full.substr(p + 1);
+        }
+        CloseHandle(h);
+    }
+    return g_procNames.emplace(pid, std::move(name)).first->second;
 }
 
 static void DrainEvents() {
@@ -421,6 +455,13 @@ static void DrainEvents() {
             std::wstring path;
             if (!g_mon.GetName(e.nameId, path)) continue;
             if (!MatchesFilter(ToLowerW(path))) continue;
+            // Resolve the image name now, while the process is most likely
+            // still alive. Doing it when the prompt is built instead loses
+            // every short-lived process - a compiler run is mostly cl.exe
+            // instances that exited seconds ago. Only the cache is warmed
+            // here; the row still stores just the PID.
+            ProcessName(e.processId);
+
             Row r; r.ts = e.timestamp; r.pid = e.processId;
             r.size = e.ioSize; r.op = e.op; r.path = std::move(path);
             g_rows.push_back(std::move(r));
@@ -470,29 +511,6 @@ static void UpdateStatus() {
 // model nothing that counts do not, and they blow past any context window. So
 // everything is collapsed into per-process, per-path, per-subfolder and
 // per-extension totals, each printed once with its count.
-
-static std::unordered_map<uint32_t, std::wstring> g_procNames;
-
-// PID -> image name, cached. Resolution can fail for a process that has already
-// exited, or for a protected one; the number is kept as the label in that case.
-static const std::wstring& ProcessName(uint32_t pid) {
-    auto it = g_procNames.find(pid);
-    if (it != g_procNames.end()) return it->second;
-
-    std::wstring name = L"pid " + std::to_wstring(pid);
-    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-    if (h) {
-        wchar_t buf[MAX_PATH] = {};
-        DWORD n = MAX_PATH;
-        if (QueryFullProcessImageNameW(h, 0, buf, &n) && n) {
-            std::wstring full(buf, n);
-            size_t p = full.find_last_of(L'\\');
-            name = (p == std::wstring::npos) ? full : full.substr(p + 1);
-        }
-        CloseHandle(h);
-    }
-    return g_procNames.emplace(pid, std::move(name)).first->second;
-}
 
 struct Agg {
     std::wstring label;           // first spelling seen, for display
@@ -783,9 +801,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         struct { const wchar_t* t; int w; } cols[] = {
             { L"Time", 100 }, { L"Op", 70 }, { L"PID", 60 },
-            { L"Size", 80 }, { L"Path", 700 }
+            { L"Process", 150 }, { L"Size", 80 }, { L"Path", 640 }
         };
-        for (int i = 0; i < 5; ++i) {
+        for (int i = 0; i < 6; ++i) {
             LVCOLUMNW c{}; c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
             c.pszText = (LPWSTR)cols[i].t; c.cx = cols[i].w; c.iSubItem = i;
             ListView_InsertColumn(g_list, i, &c);
@@ -930,8 +948,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             case 0: wcscpy_s(buf, FormatTime(r.ts).c_str()); break;
             case 1: wcscpy_s(buf, OpName(r.op)); break;
             case 2: swprintf_s(buf, L"%u", r.pid); break;
-            case 3: wcscpy_s(buf, r.size ? FormatBytes(r.size).c_str() : L""); break;
-            case 4: wcsncpy_s(buf, r.path.c_str(), 1023); break;
+            case 3: wcsncpy_s(buf, ProcessName(r.pid).c_str(), 1023); break;
+            case 4: wcscpy_s(buf, r.size ? FormatBytes(r.size).c_str() : L""); break;
+            case 5: wcsncpy_s(buf, r.path.c_str(), 1023); break;
             }
             di->item.pszText = buf;
             return 0;
