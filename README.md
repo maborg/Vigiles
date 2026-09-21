@@ -202,8 +202,8 @@ immediately - close anything using the volume first.
 Copyright (C) 2026 Marco Borgna.
 
 Vigiles is free software under the **GNU Lesser General Public License,
-version 3 or later**. The full terms are in [COPYING.LESSER](COPYING.LESSER),
-which applies on top of the GPL-3.0 text in [COPYING](COPYING) - LGPL-3.0 is
+version 3 or later**. The full terms are in [COPYING.LESSER](license/COPYING.LESSER),
+which applies on top of the GPL-3.0 text in [COPYING](license/COPYING) - LGPL-3.0 is
 written as a set of additional permissions over the GPL, so both files are
 needed for the licence to be complete.
 
