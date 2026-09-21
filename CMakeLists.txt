@@ -12,7 +12,10 @@ else()
 endif()
 message(STATUS "Vigiles sources: ${SRC_DIR}")
 
-foreach(f main.cpp etw_monitor.cpp log.cpp etw_monitor.h dir_index.h ring_buffer.h log.h)
+foreach(f main.cpp etw_monitor.cpp log.cpp app_state.cpp tree_view.cpp
+          ai_prompt.cpp process_names.cpp
+          etw_monitor.h dir_index.h ring_buffer.h log.h app_state.h
+          format.h colors.h tree_view.h ai_prompt.h process_names.h)
     if (NOT EXISTS "${SRC_DIR}/${f}")
         message(FATAL_ERROR "Missing ${f} in ${SRC_DIR}")
     endif()
@@ -22,10 +25,20 @@ set(SOURCES
     "${SRC_DIR}/main.cpp"
     "${SRC_DIR}/etw_monitor.cpp"
     "${SRC_DIR}/log.cpp"
+    "${SRC_DIR}/app_state.cpp"
+    "${SRC_DIR}/tree_view.cpp"
+    "${SRC_DIR}/ai_prompt.cpp"
+    "${SRC_DIR}/process_names.cpp"
     "${SRC_DIR}/etw_monitor.h"
     "${SRC_DIR}/dir_index.h"
     "${SRC_DIR}/ring_buffer.h"
     "${SRC_DIR}/log.h"
+    "${SRC_DIR}/app_state.h"
+    "${SRC_DIR}/format.h"
+    "${SRC_DIR}/colors.h"
+    "${SRC_DIR}/tree_view.h"
+    "${SRC_DIR}/ai_prompt.h"
+    "${SRC_DIR}/process_names.h"
 )
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app.manifest")
     list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/app.manifest")
